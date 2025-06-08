@@ -5,6 +5,7 @@ import sys, types, pathlib, subprocess, wave
 # --- Mock mínimo do módulo bpy para testes unitários ---
 def _mock_bpy():
     mock = types.ModuleType("bpy")
+    mock.types = types.SimpleNamespace(Sequence=type("Sequence", (), {}))
 
 
     def _make_strip(**kw):
@@ -20,6 +21,7 @@ def _mock_bpy():
 
     sequences_all = SeqList()
 
+    selected_sequences = SeqList()
     seq_editor = types.SimpleNamespace(
         sequences=types.SimpleNamespace(
             new_movie=lambda **k: sequences_all.append(_make_strip(**k)) or sequences_all[-1],
@@ -36,7 +38,7 @@ def _mock_bpy():
         render=types.SimpleNamespace(),
         frame_current=1,
     )
-    mock.context = types.SimpleNamespace(scene=scene)
+    mock.context = types.SimpleNamespace(scene=scene, selected_sequences=selected_sequences)
 
     class _Movie:
         frame_duration = 24
@@ -46,15 +48,24 @@ def _mock_bpy():
         remove=lambda x: None,
     ))
 
-    mock.ops = types.SimpleNamespace(
-        sequencer=types.SimpleNamespace(
-            select_all=lambda action=None: None,
-            delete=lambda: None,
-            split=lambda frame=None, type=None, side=None: None,
-            meta_make=lambda: None,
-        ),
-        render=types.SimpleNamespace(render=lambda animation=True: None),
+    def _op_add(**kw):
+        strip = _make_strip(**kw)
+        sequences_all.append(strip)
+        selected_sequences.clear()
+        selected_sequences.append(strip)
+        return strip
+
+    mock.ops = types.ModuleType("ops")
+    mock.ops.sequencer = types.SimpleNamespace(
+        select_all=lambda action=None: None,
+        delete=lambda: None,
+        split=lambda frame=None, side=None, use_cursor_position=False: None,
+        meta_make=lambda: None,
+        movie_strip_add=lambda filepath=None, frame_start=1, channel=1, overlap=False: _op_add(filepath=filepath, frame_start=frame_start, channel=channel),
+        image_strip_add=lambda filepath=None, frame_start=1, channel=1, overlap=False: _op_add(filepath=filepath, frame_start=frame_start, channel=channel),
+        sound_strip_add=lambda filepath=None, frame_start=1, channel=1, overlap=False: _op_add(filepath=filepath, frame_start=frame_start, channel=channel),
     )
+    mock.ops.render = types.SimpleNamespace(render=lambda animation=True: None)
 
     sys.modules["bpy"] = mock
 

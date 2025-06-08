@@ -24,61 +24,18 @@ def generate_project_file(config: dict):
     print("→ Para renderizar, execute: ./run_blender.sh")
 
 if __name__ == "__main__":
-    # Exemplo de um config inicial (você pode editar ou gerar dinamicamente via IA):
+    # Exemplo simples usando o novo esquema de assets
     example_config = {
-        # 1. Lista de vídeos
-        "videos": [
-            {
-                "path": "assets/video.mp4",
-                "channel": 1,
-                "start_frame": 1,
-                "name": "video1"
-            }
+        "assets": [
+            {"path": "assets/video1.mp4", "type": "video", "start": 0,  "end": 10, "channel": 1},
+            {"path": "assets/video2.mp4", "type": "video", "start": 10, "end": 20, "channel": 1},
+            {"path": "assets/overlay.mp4", "type": "video", "start": 5,  "end": 15, "channel": 2},
+            {"path": "assets/music.mp3",  "type": "audio", "start": 0,  "end": 20, "channel": 3},
         ],
-        # 2. Lista de áudios
-        "audios": [
-            {
-                "path": "assets/audio.mp3",
-                "channel": 3,
-                "start_frame": 1,
-                "name": "audio1"
-            }
-        ],
-        "images": [
-            {
-            "path": r"assets\image.png",
-            "channel": 5,
-            "start_frame": 1,
-            "frame_end": 120,
-            "name": "img1"
-            }
-        ],
-        # 3. Lista de imagens
-        # 4. Configurações de render
         "output_path": "output/final_edit.mp4",
         "resolution_x": 1920,
         "resolution_y": 1080,
         "fps": 24,
-
-        # 5. Operações (em ordem) para cortar, deletar, mesclar, transformar, etc.
-        "operations": [
-            {
-                "type": "cut_video",
-                "target": "video1",
-                "start": 3.0,
-                "end": 5.0
-            },
-            {
-                "type": "delete",
-                "target": "video1.001"
-            },
-            {
-                "type": "transform",
-                "target": "img1",
-                "translate": [100, 50],
-                "rotate": 15.0
-            },
-        ]
     }
 
     generate_project_file(example_config)

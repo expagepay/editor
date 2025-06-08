@@ -96,6 +96,7 @@ def finalize_render(output_path, res_x, res_y, fps):
     scene.render.ffmpeg.audio_codec = 'AAC'
     scene.render.ffmpeg.video_bitrate = 8000
     scene.render.ffmpeg.audio_bitrate = 192
+    scene.render.ffmpeg.audio_channels = 'STEREO'
 
     seqs = scene.sequence_editor.sequences_all
     if seqs:

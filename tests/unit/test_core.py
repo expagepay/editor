@@ -1,24 +1,19 @@
-import os
 import bpy
-import pytest
 from pathlib import Path
 import sys
 sys.path.append(str(Path(__file__).resolve().parents[2]))
-import blender_core
+
+from blender_core import sec2frame, add_media
 
 
 def test_sec2frame():
-    assert blender_core.sec2frame(1.5, 30) == 45
+    assert sec2frame(1.0, 30) == 30
 
 
-def test_finalize_frame_end(monkeypatch, strip_factory):
-    blender_core.init_sequence(24)
-    s1 = strip_factory(frame_start=1, length=5)
-    s2 = strip_factory(frame_start=6, length=10)
-    bpy.context.scene.sequence_editor.sequences_all.clear()
-    bpy.context.scene.sequence_editor.sequences_all.extend([s1, s2])
-    bpy.context.scene.render.image_settings = type("IS", (), {})()
-    bpy.context.scene.render.ffmpeg = type("FF", (), {})()
-    monkeypatch.setattr(os.path, "exists", lambda p: True)
-    blender_core.finalize_render("out.mp4", 1920, 1080, 24)
-    assert bpy.context.scene.frame_end == s2.frame_final_end
+def test_add_media_sets_frames(tmp_path):
+    dummy = tmp_path / "dummy.png"
+    dummy.write_text("x")
+    bpy.context.scene.render.fps = 30
+    bpy.context.scene.sequence_editor_create()
+    strip = add_media(str(dummy), "image", 2.5, 4.0, 5)
+    assert strip.frame_start == 75 and strip.frame_final_end == 120

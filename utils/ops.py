@@ -1,5 +1,6 @@
 from . import audio, clips
-from .common import ensure_editor, sec2frame, log
+from .common import ensure_editor, log
+from .time_utils import sec2frame
 
 
 def add_media(path: str, *, channel: int = 1, start_sec: float = 0.0,
