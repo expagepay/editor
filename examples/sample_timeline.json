@@ -1,0 +1,6 @@
+{
+    "operations": [
+        {"action": "fade", "params": {"layer": 0, "index": 0, "fade_type": "in", "duration": 1}},
+        {"action": "crossfade", "params": {"layer": 0, "duration": 1}}
+    ]
+}
