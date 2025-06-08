@@ -15,21 +15,11 @@ with open(config_path, "r") as f:
     config = json.load(f)
 
 # 3. Importa funções core
-from blender_core import (
-    init_sequence,
-    add_video_strip,
-    add_audio_strip,
-    add_image_strip,
-    split_strip,
-    delete_strip,
-    merge_strips,
-    transform_strip,
-    finalize_render
-)
+import blender_core
 
 # 4. Define FPS e inicializa a Sequencer
 fps = config.get("fps", 24)
-sequence_collection = init_sequence(fps)
+sequence_collection = blender_core.OPERATIONS["init_sequence"](fps)
 if sequence_collection is None:
     raise RuntimeError("Falha em inicializar a Sequencer (VSE).")
 
@@ -42,7 +32,7 @@ for vid in config.get("videos", []):
     ch = vid.get("channel", 1)
     fs = vid.get("start_frame", 1)
     nm = vid.get("name")
-    strip = add_video_strip(abs_path, channel=ch, frame_start=fs)
+    strip = blender_core.OPERATIONS["add_video_strip"](abs_path, channel=ch, frame_start=fs)
     strip.name = nm
     video_strips[nm] = strip
 
@@ -53,7 +43,7 @@ for aud in config.get("audios", []):
     ch = aud.get("channel", 3)
     fs = aud.get("start_frame", 1)
     nm = aud.get("name")
-    strip = add_audio_strip(abs_path, channel=ch, frame_start=fs)
+    strip = blender_core.OPERATIONS["add_audio_strip"](abs_path, channel=ch, frame_start=fs)
     strip.name = nm
     audio_strips[nm] = strip
 
@@ -65,7 +55,7 @@ for img in config.get("images", []):
     fs = img.get("start_frame", 1)
     fe = img.get("frame_end", None)
     nm = img.get("name")
-    strip = add_image_strip(abs_path, channel=ch, frame_start=fs, frame_end=fe)
+    strip = blender_core.OPERATIONS["add_image_strip"](abs_path, channel=ch, frame_start=fs, frame_end=fe)
     strip.name = nm
     image_strips[nm] = strip
 
@@ -85,16 +75,16 @@ for op in ops:
             continue
         frames = [int(t * fps) for t in times]
         for f in frames:
-            split_strip(strip, f)
+            blender_core.OPERATIONS["split_strip"](strip, f)
 
     elif kind == "delete":
         target = op["target"]
-        delete_strip(target)
+        blender_core.OPERATIONS["delete_strip"](target)
 
     elif kind == "merge":
         targets = op.get("targets", [])
         out_name = op.get("output_name", "MergedMeta")
-        merge_strips(targets, output_name=out_name)
+        blender_core.OPERATIONS["merge_strips"](targets, output_name=out_name)
 
     elif kind == "transform":
         target = op["target"]
@@ -104,7 +94,7 @@ for op in ops:
         if not strip:
             print(f"❌ Transform: strip '{target}' não encontrado.")
             continue
-        transform_strip(strip, translate=(dx, dy), rotation=angle)
+        blender_core.OPERATIONS["transform_strip"](strip, translate=(dx, dy), rotation=angle)
 
     else:
         print(f"⚠️ Operação desconhecida: {kind}")
@@ -114,4 +104,4 @@ output_rel = config.get("output_path", "output/final_edit.mp4")
 output_abs = os.path.join(script_dir, output_rel)
 res_x = config.get("resolution_x", 1920)
 res_y = config.get("resolution_y", 1080)
-finalize_render(output_abs, res_x, res_y, fps)
+blender_core.OPERATIONS["finalize_render"](output_abs, res_x, res_y, fps)

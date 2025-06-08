@@ -3,6 +3,21 @@
 import bpy
 import os
 
+OPERATIONS: dict[str, callable] = {}
+
+def register(name: str):
+    def _decorator(fn):
+        OPERATIONS[name] = fn
+        return fn
+    return _decorator
+
+def _ensure_editor():
+    scene = bpy.context.scene
+    if not scene.sequence_editor:
+        scene.sequence_editor_create()
+    return scene
+
+@register("init_sequence")
 def init_sequence(fps):
     """
     Cria (ou reseta) a Sequencer (VSE) e já ajusta o FPS da cena.
@@ -21,6 +36,7 @@ def init_sequence(fps):
     return scene.sequence_editor.sequences_all
 
 
+@register("add_video_strip")
 def add_video_strip(video_path, channel=1, frame_start=1):
     """
     Adiciona um clipe de vídeo usando new_movie e, em seguida, força o frame_final_end
@@ -30,9 +46,7 @@ def add_video_strip(video_path, channel=1, frame_start=1):
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Vídeo não encontrado: {video_path}")
 
-    scene = bpy.context.scene
-    if not scene.sequence_editor:
-        scene.sequence_editor_create()
+    scene = _ensure_editor()
 
     # 1) Cria o strip com new_movie
     strip = scene.sequence_editor.sequences.new_movie(
@@ -59,6 +73,7 @@ def add_video_strip(video_path, channel=1, frame_start=1):
     return strip
 
 
+@register("add_audio_strip")
 def add_audio_strip(audio_path, channel=2, frame_start=1):
     """
     Adiciona uma faixa de áudio usando new_sound. Por ora, confiamos no VSE
@@ -67,9 +82,7 @@ def add_audio_strip(audio_path, channel=2, frame_start=1):
     """
     if not os.path.exists(audio_path):
         raise FileNotFoundError(f"Áudio não encontrado: {audio_path}")
-    scene = bpy.context.scene
-    if not scene.sequence_editor:
-        scene.sequence_editor_create()
+    scene = _ensure_editor()
 
     strip = scene.sequence_editor.sequences.new_sound(
         name=os.path.splitext(os.path.basename(audio_path))[0],
@@ -86,6 +99,7 @@ def add_audio_strip(audio_path, channel=2, frame_start=1):
     return strip
 
 
+@register("add_image_strip")
 def add_image_strip(image_path, channel=3, frame_start=1, frame_end=None):
     """
     Adiciona um strip de imagem (imagem estática). Se frame_end não for fornecido,
@@ -93,9 +107,7 @@ def add_image_strip(image_path, channel=3, frame_start=1, frame_end=None):
     """
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Imagem não encontrada: {image_path}")
-    scene = bpy.context.scene
-    if not scene.sequence_editor:
-        scene.sequence_editor_create()
+    scene = _ensure_editor()
 
     strip = scene.sequence_editor.sequences.new_image(
         name=os.path.splitext(os.path.basename(image_path))[0],
@@ -112,10 +124,12 @@ def add_image_strip(image_path, channel=3, frame_start=1, frame_end=None):
     return strip
 
 
+@register("split_strip")
 def split_strip(strip, split_frame):
     """
     Divide o strip (vídeo, áudio ou imagem) em dois no split_frame.
     """
+    _ensure_editor()
     bpy.ops.sequencer.select_all(action='DESELECT')
     strip.select = True
     bpy.context.scene.frame_current = split_frame
@@ -123,11 +137,12 @@ def split_strip(strip, split_frame):
     print(f"Strip '{strip.name}' dividido em frame {split_frame}.")
 
 
+@register("delete_strip")
 def delete_strip(strip_name):
     """
     Deleta totalmente o strip cujo nome é strip_name.
     """
-    seqs = bpy.context.scene.sequence_editor.sequences_all
+    seqs = _ensure_editor().sequence_editor.sequences_all
     strip = seqs.get(strip_name)
     if strip:
         bpy.ops.sequencer.select_all(action='DESELECT')
@@ -138,12 +153,13 @@ def delete_strip(strip_name):
         print(f"Strip '{strip_name}' não encontrado para deletar.")
 
 
+@register("merge_strips")
 def merge_strips(strip_names, output_name="MergedMeta"):
     """
     Agrupa (cria Meta Strip) a lista de strips cujo nome está em strip_names.
     Retorna o Meta strip criado.
     """
-    seqs = bpy.context.scene.sequence_editor.sequences_all
+    seqs = _ensure_editor().sequence_editor.sequences_all
     bpy.ops.sequencer.select_all(action='DESELECT')
     for name in strip_names:
         s = seqs.get(name)
@@ -156,6 +172,7 @@ def merge_strips(strip_names, output_name="MergedMeta"):
     return meta
 
 
+@register("transform_strip")
 def transform_strip(strip, translate=(0, 0), rotation=0.0):
     """
     Aplica transformações básicas a um strip:
@@ -163,7 +180,7 @@ def transform_strip(strip, translate=(0, 0), rotation=0.0):
       - rotation: em graus
     Isso é feito criando um Effect Strip 'TRANSFORM' que recebe o strip original.
     """
-    scene = bpy.context.scene
+    scene = _ensure_editor()
     trans = scene.sequence_editor.sequences.new_effect(
         name=f"Transform_{strip.name}",
         type='TRANSFORM',
@@ -180,13 +197,14 @@ def transform_strip(strip, translate=(0, 0), rotation=0.0):
     return trans
 
 
+@register("finalize_render")
 def finalize_render(output_path, res_x, res_y, fps):
     """
     Configura todas as propriedades de render e dispara a renderização em modo
     ‘sequencer → compositor’.
     """
     import os
-    scene = bpy.context.scene
+    scene = _ensure_editor()
 
     # 1. Resolução e FPS
     scene.render.resolution_x = res_x
@@ -226,3 +244,229 @@ def finalize_render(output_path, res_x, res_y, fps):
         print("✅ Render concluído:", output_path)
     else:
         print("❌ Falha no render: arquivo não foi criado.")
+
+
+@register("split_video_strip")
+def split_video_strip(strip_name: str, split_times: list, fps: int) -> list:
+    scene = _ensure_editor()
+    seqs = scene.sequence_editor.sequences_all
+    strip = seqs.get(strip_name)
+    if strip is None:
+        raise ValueError(f"Strip '{strip_name}' não encontrado para split.")
+
+    frames = sorted(int(t * fps) for t in split_times)
+    for f in reversed(frames):
+        scene.frame_current = f
+        bpy.ops.sequencer.select_all(action='DESELECT')
+        strip.select = True
+        bpy.ops.sequencer.split(frame=f, type='SOFT', side='LEFT')
+
+    new_strips = [s.name for s in seqs if s.name.startswith(strip_name)]
+    print(f"Split em '{strip_name}' nos frames {frames}, gerou: {new_strips}")
+    return new_strips
+
+
+@register("cut_video_strip")
+def cut_video_strip(strip_name: str, start_time: float, end_time: float, fps: int) -> str:
+    scene = _ensure_editor()
+    seqs = scene.sequence_editor.sequences_all
+    orig = seqs.get(strip_name)
+    if orig is None:
+        raise ValueError(f"Strip '{strip_name}' não encontrado para cut.")
+
+    start_frame = int(start_time * fps)
+    end_frame = int(end_time * fps)
+
+    scene.frame_current = end_frame
+    bpy.ops.sequencer.select_all(action='DESELECT')
+    orig.select = True
+    bpy.ops.sequencer.split(frame=end_frame, type='SOFT', side='LEFT')
+    seqs = scene.sequence_editor.sequences_all
+    before_end = seqs.get(strip_name)
+    after_end = next((s for s in seqs if s.name.startswith(strip_name + ".00") and s.frame_final_start > end_frame), None)
+
+    scene.frame_current = start_frame
+    bpy.ops.sequencer.select_all(action='DESELECT')
+    before_end.select = True
+    bpy.ops.sequencer.split(frame=start_frame, type='SOFT', side='LEFT')
+    seqs = scene.sequence_editor.sequences_all
+    before_start = seqs.get(strip_name)
+    middle = next((s for s in seqs if s.name.startswith(strip_name + ".00") and s.frame_final_end <= end_frame), None)
+    after_middle = next((s for s in seqs if s.name.startswith(strip_name + ".00") and s.frame_final_start >= end_frame), None)
+
+    to_delete = []
+    if before_start:
+        to_delete.append(before_start.name)
+    if after_end:
+        to_delete.append(after_end.name)
+    if after_middle and after_middle.name not in to_delete:
+        to_delete.append(after_middle.name)
+
+    for name in to_delete:
+        s = seqs.get(name)
+        if s:
+            bpy.ops.sequencer.select_all(action='DESELECT')
+            s.select = True
+            bpy.ops.sequencer.delete()
+            print(f"cut_video_strip: Removido '{name}'")
+
+    if middle:
+        new_name = f"{strip_name}_cut"
+        middle.name = new_name
+        print(f"cut_video_strip: Strip resultante '{new_name}' (start={start_time}s, end={end_time}s)")
+        return new_name
+    else:
+        raise RuntimeError(f"cut_video_strip: Não foi possível encontrar o trecho intermediário para '{strip_name}'.")
+
+
+@register("split_audio_strip")
+def split_audio_strip(strip_name: str, split_times: list, fps: int) -> list:
+    scene = _ensure_editor()
+    seqs = scene.sequence_editor.sequences_all
+    strip = seqs.get(strip_name)
+    if strip is None:
+        raise ValueError(f"Strip de áudio '{strip_name}' não encontrado para split.")
+
+    frames = sorted(int(t * fps) for t in split_times)
+    for f in reversed(frames):
+        scene.frame_current = f
+        bpy.ops.sequencer.select_all(action='DESELECT')
+        strip.select = True
+        bpy.ops.sequencer.split(frame=f, type='SOFT', side='LEFT')
+
+    new_strips = [s.name for s in seqs if s.name.startswith(strip_name)]
+    print(f"Split em áudio '{strip_name}' nos frames {frames}, gerou: {new_strips}")
+    return new_strips
+
+
+@register("cut_audio_strip")
+def cut_audio_strip(strip_name: str, start_time: float, end_time: float, fps: int) -> str:
+    scene = _ensure_editor()
+    seqs = scene.sequence_editor.sequences_all
+    orig = seqs.get(strip_name)
+    if orig is None:
+        raise ValueError(f"Strip de áudio '{strip_name}' não encontrado para cut.")
+
+    start_frame = int(start_time * fps)
+    end_frame = int(end_time * fps)
+
+    scene.frame_current = end_frame
+    bpy.ops.sequencer.select_all(action='DESELECT')
+    orig.select = True
+    bpy.ops.sequencer.split(frame=end_frame, type='SOFT', side='LEFT')
+    seqs = scene.sequence_editor.sequences_all
+    before_end = seqs.get(strip_name)
+    after_end = next((s for s in seqs if s.name.startswith(strip_name + ".00") and s.frame_final_start > end_frame), None)
+
+    scene.frame_current = start_frame
+    bpy.ops.sequencer.select_all(action='DESELECT')
+    before_end.select = True
+    bpy.ops.sequencer.split(frame=start_frame, type='SOFT', side='LEFT')
+    seqs = scene.sequence_editor.sequences_all
+    before_start = seqs.get(strip_name)
+    middle = next((s for s in seqs if s.name.startswith(strip_name + ".00") and s.frame_final_end <= end_frame), None)
+    after_middle = next((s for s in seqs if s.name.startswith(strip_name + ".00") and s.frame_final_start >= end_frame), None)
+
+    to_delete = []
+    if before_start:
+        to_delete.append(before_start.name)
+    if after_end:
+        to_delete.append(after_end.name)
+    if after_middle and after_middle.name not in to_delete:
+        to_delete.append(after_middle.name)
+
+    for name in to_delete:
+        s = seqs.get(name)
+        if s:
+            bpy.ops.sequencer.select_all(action='DESELECT')
+            s.select = True
+            bpy.ops.sequencer.delete()
+            print(f"cut_audio_strip: Removido '{name}'")
+
+    if middle:
+        new_name = f"{strip_name}_cut"
+        middle.name = new_name
+        print(f"cut_audio_strip: Strip resultante '{new_name}' (start={start_time}s, end={end_time}s)")
+        return new_name
+    else:
+        raise RuntimeError(f"cut_audio_strip: Não foi possível encontrar trecho intermediário para '{strip_name}'.")
+
+
+@register("set_audio_volume")
+def set_audio_volume(strip_name: str, volume_percent: float):
+    seqs = _ensure_editor().sequence_editor.sequences_all
+    strip = seqs.get(strip_name)
+    if strip is None:
+        raise ValueError(f"Strip de áudio '{strip_name}' não encontrado para ajuste de volume.")
+
+    vol = max(0.0, min(volume_percent / 100.0, 2.0))
+    strip.volume = vol
+    print(f"set_audio_volume: Strip '{strip_name}' volume ajustado para {volume_percent}% (valor Blender={vol})")
+
+
+@register("extract_audio_from_video")
+def extract_audio_from_video(video_strip_name: str, channel: int = 1, frame_start: int = 1) -> str:
+    seqs = _ensure_editor().sequence_editor.sequences_all
+    vstrip = seqs.get(video_strip_name)
+    if vstrip is None:
+        raise ValueError(f"Strip de vídeo '{video_strip_name}' não encontrado para extrair áudio.")
+
+    video_path = vstrip.filepath
+    scene = bpy.context.scene
+    scene.frame_current = vstrip.frame_start
+    bpy.ops.sequencer.sound_strip_add(
+        filepath=video_path,
+        channel=channel,
+        frame_start=vstrip.frame_start,
+    )
+    new_audio = scene.sequence_editor.sequences_all[-1]
+    new_name = f"{video_strip_name}_audio"
+    new_audio.name = new_name
+    print(f"extract_audio_from_video: '{new_name}' criado a partir de '{video_strip_name}'")
+    return new_name
+
+
+@register("rotate_strip")
+def rotate_strip(strip_name: str, angle_deg: float):
+    scene = _ensure_editor()
+    seqs = scene.sequence_editor.sequences_all
+    strip = seqs.get(strip_name)
+    if not strip:
+        raise ValueError(f"Strip '{strip_name}' não encontrado para rotacionar.")
+
+    trans = scene.sequence_editor.sequences.new_effect(
+        name=f"Rotate_{strip_name}",
+        type='TRANSFORM',
+        channel=strip.channel + 1,
+        frame_start=strip.frame_start,
+        frame_end=strip.frame_final_end,
+        seq1=strip,
+    )
+    trans.rotation_start = angle_deg
+    print(f"Strip '{strip_name}' rotacionado em {angle_deg}°")
+    return trans
+
+
+@register("translate_strip")
+def translate_strip(strip_name: str, dx: float, dy: float):
+    scene = _ensure_editor()
+    seqs = scene.sequence_editor.sequences_all
+    strip = seqs.get(strip_name)
+    if not strip:
+        raise ValueError(f"Strip '{strip_name}' não encontrado para translação.")
+
+    trans = scene.sequence_editor.sequences.new_effect(
+        name=f"Translate_{strip_name}",
+        type='TRANSFORM',
+        channel=strip.channel + 1,
+        frame_start=strip.frame_start,
+        frame_end=strip.frame_final_end,
+        seq1=strip,
+    )
+    trans.translate_start_x = int(dx)
+    trans.translate_start_y = int(dy)
+    print(f"Strip '{strip_name}' deslocado em ({dx}, {dy})")
+    return trans
+
+__all__ = list(OPERATIONS.keys())
+
