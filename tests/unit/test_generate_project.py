@@ -4,13 +4,13 @@ import shutil
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.append(str(ROOT))
 
 from generate_project import generate_project_file
 
 
-def test_generate_project_file(tmp_path):
+def test_generate_project_file(tmp_path, project_root):
     config = {
         "videos": [],
         "audios": [],
@@ -18,9 +18,8 @@ def test_generate_project_file(tmp_path):
         "operations": []
     }
 
-    template_src = os.path.join(os.path.dirname(__file__), os.pardir, "blender_script_template.py")
-    template_dst = tmp_path / "blender_script_template.py"
-    shutil.copy(template_src, template_dst)
+    template_src = project_root / "blender_script_template.py"
+    shutil.copy(template_src, tmp_path / "blender_script_template.py")
 
     cwd = os.getcwd()
     os.chdir(tmp_path)
@@ -33,4 +32,3 @@ def test_generate_project_file(tmp_path):
         assert data == config
     finally:
         os.chdir(cwd)
-
