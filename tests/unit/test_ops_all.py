@@ -1,6 +1,10 @@
 import inspect
 import pytest
 
+import conftest  # ensures bpy is mocked
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 import blender_core
 
 @pytest.mark.parametrize("name,fn", blender_core.OPERATIONS.items())

@@ -4,10 +4,13 @@ import bpy
 import json
 import os
 import sys
+import logging
 
 # 1. Garante que podemos importar blender_core e utils
 script_dir = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(script_dir)
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 # 2. Carrega configuração JSON
 config_path = os.path.join(script_dir, "config", "project_config.json")
