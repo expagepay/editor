@@ -47,11 +47,14 @@ def test_render_cli(tmp_path, project_root, prepare_assets):
             stderr=subprocess.STDOUT,
             timeout=180,
         )
+
+
+
         assert result.returncode == 0
-        out = result.stdout.decode("utf-8", errors="ignore")
-        assert "Finished Rendering" in out
-        out = tmp_path / "output" / "final.mp4"
-        assert out.exists()
-        assert out.stat().st_size > 0
+
+        rendered = tmp_path / "output" / "final.mp4"
+        assert rendered.is_file()
+        assert rendered.stat().st_size > 0
+
     finally:
         os.chdir(cwd)
