@@ -104,6 +104,7 @@ def test_json_flow(tmp_path, project_root, prepare_assets, monkeypatch):
         monkeypatch.setattr(blender_core, "finalize_render", fake_finalize)
         blender_core.OPERATIONS["finalize_render"] = fake_finalize
 
+
         runpy.run_path(str(tmp_path / "blender_script.py"), run_name="__main__")
         assert len(fake_bpy.context.scene.sequence_editor.sequences_all) >= 2
     finally:

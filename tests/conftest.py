@@ -1,8 +1,11 @@
+
 import sys, types, pathlib, subprocess, wave
+
 
 # --- Mock mínimo do módulo bpy para testes unitários ---
 def _mock_bpy():
     mock = types.ModuleType("bpy")
+
 
     def _make_strip(**kw):
         strip = types.SimpleNamespace(**kw)
