@@ -94,7 +94,7 @@ for op in ops:
         # Se quiser usar os novos sub-strips em operações posteriores,
         # você pode iterar new_names e adicioná-los em video_strips[...]
 
-    elif kind == "cut_video":
+    elif kind in ("cut_video", "cut_video_strip"):
         target = op["target"]
         start_time = op.get("start", 0.0)
         end_time = op.get("end", 0.0)

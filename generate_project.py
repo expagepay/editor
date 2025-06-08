@@ -63,9 +63,10 @@ if __name__ == "__main__":
         # 5. Operações (em ordem) para cortar, deletar, mesclar, transformar, etc.
         "operations": [
             {
-                "type": "cut_video_strip",
+                "type": "cut_video",
                 "target": "video1",
-                "times": [3.0, 5.0]
+                "start": 3.0,
+                "end": 5.0
             },
             {
                 "type": "delete",
