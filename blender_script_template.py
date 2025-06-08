@@ -22,7 +22,7 @@ import blender_core
 
 # 4. Define FPS e inicializa a Sequencer
 fps = config.get("fps", 24)
-sequence_collection = blender_core.OPERATIONS["init_sequence"](fps)
+sequence_collection = blender_core.init_sequence(fps)
 if sequence_collection is None:
     raise RuntimeError("Falha em inicializar a Sequencer (VSE).")
 
@@ -33,9 +33,12 @@ for vid in config.get("videos", []):
     rel_path = vid["path"]             # ex: "assets/video.mp4"
     abs_path = os.path.join(script_dir, rel_path)
     ch = vid.get("channel", 1)
-    fs = vid.get("start_frame", 1)
+    start_sec = vid.get("start_sec")
+    if start_sec is None:
+        start_sec = vid.get("start_frame", 1) / fps
+    end_sec = vid.get("end_sec")
     nm = vid.get("name")
-    strip = blender_core.OPERATIONS["add_video_strip"](abs_path, channel=ch, frame_start=fs)
+    strip = blender_core.add_media(abs_path, channel=ch, start_sec=start_sec, end_sec=end_sec, fps=fps)
     strip.name = nm
     video_strips[nm] = strip
 
@@ -44,9 +47,12 @@ for aud in config.get("audios", []):
     rel_path = aud["path"]             # ex: "assets/audio.mp3"
     abs_path = os.path.join(script_dir, rel_path)
     ch = aud.get("channel", 3)
-    fs = aud.get("start_frame", 1)
+    start_sec = aud.get("start_sec")
+    if start_sec is None:
+        start_sec = aud.get("start_frame", 1) / fps
+    end_sec = aud.get("end_sec")
     nm = aud.get("name")
-    strip = blender_core.OPERATIONS["add_audio_strip"](abs_path, channel=ch, frame_start=fs)
+    strip = blender_core.add_media(abs_path, channel=ch, start_sec=start_sec, end_sec=end_sec, fps=fps)
     strip.name = nm
     audio_strips[nm] = strip
 
@@ -55,10 +61,15 @@ for img in config.get("images", []):
     rel_path = img["path"]             # ex: "assets/image.png"
     abs_path = os.path.join(script_dir, rel_path)
     ch = img.get("channel", 5)
-    fs = img.get("start_frame", 1)
-    fe = img.get("frame_end", None)
+    start_sec = img.get("start_sec")
+    if start_sec is None:
+        start_sec = img.get("start_frame", 1) / fps
+    end_sec = img.get("end_sec")
+    if end_sec is None:
+        fe = img.get("frame_end")
+        end_sec = fe / fps if fe is not None else None
     nm = img.get("name")
-    strip = blender_core.OPERATIONS["add_image_strip"](abs_path, channel=ch, frame_start=fs, frame_end=fe)
+    strip = blender_core.add_media(abs_path, channel=ch, start_sec=start_sec, end_sec=end_sec, fps=fps)
     strip.name = nm
     image_strips[nm] = strip
 
@@ -76,18 +87,13 @@ for op in ops:
         if not strip:
             print(f"❌ Split: strip '{target}' não encontrado.")
             continue
-        frames = [int(t * fps) for t in times]
-        for f in frames:
-            blender_core.OPERATIONS["split_strip"](strip, f)
+        blender_core.split_at(target, times, fps)
 
     elif kind == "delete":
-        target = op["target"]
-        blender_core.OPERATIONS["delete_strip"](target)
+        blender_core.delete_strip(op["target"])
 
     elif kind == "merge":
-        targets = op.get("targets", [])
-        out_name = op.get("output_name", "MergedMeta")
-        blender_core.OPERATIONS["merge_strips"](targets, output_name=out_name)
+        blender_core.merge_strips(op.get("targets", []), output_name=op.get("output_name", "MergedMeta"))
 
     elif kind == "transform":
         target = op["target"]
@@ -97,7 +103,7 @@ for op in ops:
         if not strip:
             print(f"❌ Transform: strip '{target}' não encontrado.")
             continue
-        blender_core.OPERATIONS["transform_strip"](strip, translate=(dx, dy), rotation=angle)
+        blender_core.transform_strip(strip, translate=(dx, dy), rotation=angle)
 
     else:
         print(f"⚠️ Operação desconhecida: {kind}")
@@ -107,4 +113,4 @@ output_rel = config.get("output_path", "output/final_edit.mp4")
 output_abs = os.path.join(script_dir, output_rel)
 res_x = config.get("resolution_x", 1920)
 res_y = config.get("resolution_y", 1080)
-blender_core.OPERATIONS["finalize_render"](output_abs, res_x, res_y, fps)
+blender_core.finalize_render(output_abs, res_x, res_y, fps)

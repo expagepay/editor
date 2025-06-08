@@ -122,7 +122,3 @@ def extract_audio_from_video(video_strip_name: str, channel: int = 1, frame_star
     return new_name
 
 
-def mix_audio(*args, **kwargs):
-    log.debug("mix_audio chamado com args=%s kwargs=%s", args, kwargs)
-    # implementação simplificada/placeholder
-    return None

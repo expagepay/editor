@@ -53,15 +53,6 @@ def add_image_strip(image_path, channel=3, frame_start=1, frame_end=None):
     return strip
 
 
-def split_strip(strip, split_frame):
-    ensure_editor()
-    bpy.ops.sequencer.select_all(action='DESELECT')
-    strip.select = True
-    bpy.context.scene.frame_current = int(split_frame)
-    bpy.ops.sequencer.split(frame=int(split_frame), type='SOFT', side='LEFT')
-    log.debug("Strip '%s' dividido em frame %s", strip.name, split_frame)
-
-
 def delete_strip(strip_name):
     seqs = ensure_editor().sequence_editor.sequences_all
     strip = seqs.get(strip_name)
@@ -195,6 +186,3 @@ def cut_video_strip(strip_name: str, start_time: float, end_time: float, fps: in
     raise RuntimeError(f"cut_video_strip: Não foi possível encontrar o trecho intermediário para '{strip_name}'.")
 
 
-def cut_video(*args, **kwargs):
-    """Alias conveniente para :func:`cut_video_strip`."""
-    return cut_video_strip(*args, **kwargs)

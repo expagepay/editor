@@ -1,107 +1,45 @@
 import logging
 
 from utils import audio, clips, transform
+from utils.common import sec2frame
+from utils.ops import add_media, cut_between, split_at
 
 log = logging.getLogger(__name__)
 
-OPERATIONS: dict[str, callable] = {}
 
-
-def register(name: str):
-    def _decorator(fn):
-        OPERATIONS[name] = fn
-        return fn
-    return _decorator
-
-
-@register("init_sequence")
-def init_sequence(fps):
+def init_sequence(fps: int):
+    """Initialize the VSE with the given FPS."""
     return clips.init_sequence(fps)
 
 
-@register("add_video_strip")
-def add_video_strip(*args, **kwargs):
-    return clips.add_video_strip(*args, **kwargs)
+# re-export helpers directly for external use
+add_video_strip = clips.add_video_strip
+add_audio_strip = audio.add_audio_strip
+add_image_strip = clips.add_image_strip
+delete_strip = clips.delete_strip
+merge_strips = clips.merge_strips
+transform_strip = transform.transform_strip
+rotate_strip = transform.rotate_strip
+translate_strip = transform.translate_strip
+set_audio_volume = audio.set_audio_volume
+extract_audio_from_video = audio.extract_audio_from_video
+finalize_render = clips.finalize_render
 
-
-@register("add_audio_strip")
-def add_audio_strip(*args, **kwargs):
-    return audio.add_audio_strip(*args, **kwargs)
-
-
-@register("add_image_strip")
-def add_image_strip(*args, **kwargs):
-    return clips.add_image_strip(*args, **kwargs)
-
-
-@register("split_strip")
-def split_strip(*args, **kwargs):
-    return clips.split_strip(*args, **kwargs)
-
-
-@register("delete_strip")
-def delete_strip(*args, **kwargs):
-    return clips.delete_strip(*args, **kwargs)
-
-
-@register("merge_strips")
-def merge_strips(*args, **kwargs):
-    return clips.merge_strips(*args, **kwargs)
-
-
-@register("transform_strip")
-def transform_strip(*args, **kwargs):
-    return transform.transform_strip(*args, **kwargs)
-
-
-@register("finalize_render")
-def finalize_render(*args, **kwargs):
-    return clips.finalize_render(*args, **kwargs)
-
-
-@register("split_video_strip")
-def split_video_strip(*args, **kwargs):
-    return clips.split_video_strip(*args, **kwargs)
-
-
-@register("cut_video_strip")
-def cut_video_strip(*args, **kwargs):
-    return clips.cut_video_strip(*args, **kwargs)
-
-
-@register("cut_video")
-def cut_video(*args, **kwargs):
-    return clips.cut_video(*args, **kwargs)
-
-
-@register("split_audio_strip")
-def split_audio_strip(*args, **kwargs):
-    return audio.split_audio_strip(*args, **kwargs)
-
-
-@register("cut_audio_strip")
-def cut_audio_strip(*args, **kwargs):
-    return audio.cut_audio_strip(*args, **kwargs)
-
-
-@register("set_audio_volume")
-def set_audio_volume(*args, **kwargs):
-    return audio.set_audio_volume(*args, **kwargs)
-
-
-@register("extract_audio_from_video")
-def extract_audio_from_video(*args, **kwargs):
-    return audio.extract_audio_from_video(*args, **kwargs)
-
-
-@register("rotate_strip")
-def rotate_strip(*args, **kwargs):
-    return transform.rotate_strip(*args, **kwargs)
-
-
-@register("translate_strip")
-def translate_strip(*args, **kwargs):
-    return transform.translate_strip(*args, **kwargs)
-
-
-__all__ = list(OPERATIONS.keys())
+__all__ = [
+    "sec2frame",
+    "init_sequence",
+    "add_media",
+    "add_video_strip",
+    "add_audio_strip",
+    "add_image_strip",
+    "delete_strip",
+    "merge_strips",
+    "transform_strip",
+    "rotate_strip",
+    "translate_strip",
+    "set_audio_volume",
+    "extract_audio_from_video",
+    "cut_between",
+    "split_at",
+    "finalize_render",
+]
