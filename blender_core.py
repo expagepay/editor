@@ -24,7 +24,7 @@ def init_sequence(fps):
 def add_video_strip(video_path, channel=1, frame_start=1):
     """
     Adiciona um clipe de vídeo usando new_movie e, em seguida, força o frame_final_end
-    a partir da duração real do arquivo (obtinada via bpy.data.movieclips.load).
+    a partir da duração real do arquivo (obtida via bpy.data.movieclips.load).
     Retorna o objeto de strip inserido na timeline.
     """
     if not os.path.exists(video_path):
