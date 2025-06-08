@@ -1,4 +1,6 @@
 pytest>=8
 pytest-mock
 coverage
-pillow
+pytest-cov
+numpy
+

@@ -10,6 +10,7 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from generate_project import generate_project_file
+import blender_core
 
 
 def test_json_flow(tmp_path, project_root, prepare_assets, monkeypatch):
@@ -59,9 +60,10 @@ def test_json_flow(tmp_path, project_root, prepare_assets, monkeypatch):
             )
         )
         monkeypatch.setitem(sys.modules, "bpy", fake_bpy)
+        import importlib
+        importlib.reload(blender_core)
 
         # stub all blender_core functions to just append calls
-        import blender_core
 
         def fake_init_sequence(fps):
             fake_bpy.context.scene.sequence_editor.sequences_all = []
@@ -83,14 +85,25 @@ def test_json_flow(tmp_path, project_root, prepare_assets, monkeypatch):
             return seq
 
         monkeypatch.setattr(blender_core, "init_sequence", fake_init_sequence)
+        blender_core.OPERATIONS["init_sequence"] = fake_init_sequence
         monkeypatch.setattr(blender_core, "add_video_strip", fake_add_video_strip)
+        blender_core.OPERATIONS["add_video_strip"] = fake_add_video_strip
         monkeypatch.setattr(blender_core, "add_audio_strip", fake_add_audio_strip)
+        blender_core.OPERATIONS["add_audio_strip"] = fake_add_audio_strip
         monkeypatch.setattr(blender_core, "add_image_strip", fake_add_image_strip)
+        blender_core.OPERATIONS["add_image_strip"] = fake_add_image_strip
         monkeypatch.setattr(blender_core, "split_strip", lambda *a, **k: None)
+        blender_core.OPERATIONS["split_strip"] = lambda *a, **k: None
         monkeypatch.setattr(blender_core, "delete_strip", lambda *a, **k: None)
+        blender_core.OPERATIONS["delete_strip"] = lambda *a, **k: None
         monkeypatch.setattr(blender_core, "merge_strips", lambda *a, **k: None)
+        blender_core.OPERATIONS["merge_strips"] = lambda *a, **k: None
         monkeypatch.setattr(blender_core, "transform_strip", lambda *a, **k: None)
-        monkeypatch.setattr(blender_core, "finalize_render", lambda *a, **k: None)
+        blender_core.OPERATIONS["transform_strip"] = lambda *a, **k: None
+        fake_finalize = lambda *a, **k: None
+        monkeypatch.setattr(blender_core, "finalize_render", fake_finalize)
+        blender_core.OPERATIONS["finalize_render"] = fake_finalize
+
 
         runpy.run_path(str(tmp_path / "blender_script.py"), run_name="__main__")
         assert len(fake_bpy.context.scene.sequence_editor.sequences_all) >= 2
