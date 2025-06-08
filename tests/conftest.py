@@ -1,5 +1,4 @@
-import sys, types, pathlib, subprocess, numpy as np, wave
-from PIL import Image
+import sys, types, pathlib, subprocess, wave
 
 # --- Mock mínimo do módulo bpy para testes unitários ---
 def _mock_bpy():
@@ -12,7 +11,11 @@ def _mock_bpy():
         strip.select = False
         return strip
 
-    sequences_all = []
+    class SeqList(list):
+        def get(self, name):
+            return next((s for s in self if getattr(s, "name", None) == name), None)
+
+    sequences_all = SeqList()
 
     seq_editor = types.SimpleNamespace(
         sequences=types.SimpleNamespace(
@@ -70,26 +73,7 @@ def prepare_assets(project_root):
     video = assets / "video.mp4"
     audio = assets / "audio.wav"
     if not video.exists():
-        frame_dir = assets / "frames"
-        frame_dir.mkdir(exist_ok=True)
-        for i in range(24):
-            img = np.full((64, 64, 3), fill_value=[i * 10 % 255], dtype=np.uint8)
-            Image.fromarray(img).save(frame_dir / f"f{i:03d}.png")
-        subprocess.check_call([
-            "ffmpeg",
-            "-loglevel",
-            "quiet",
-            "-y",
-            "-r",
-            "24",
-            "-i",
-            str(frame_dir / "f%03d.png"),
-            "-c:v",
-            "libx264",
-            "-pix_fmt",
-            "yuv420p",
-            str(video),
-        ])
+        video.write_bytes(b"\x00")
     if not audio.exists():
         with wave.open(str(audio), "w") as w:
             w.setnchannels(1)

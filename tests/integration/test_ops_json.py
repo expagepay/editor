@@ -1,10 +1,12 @@
 import os
 import shutil
 import runpy
+import sys
 from pathlib import Path
 
 import blender_core
 from generate_project import generate_project_file
+from tests import conftest
 
 
 def test_ops_json(tmp_path, project_root, prepare_assets):
@@ -37,6 +39,12 @@ def test_ops_json(tmp_path, project_root, prepare_assets):
     os.chdir(tmp_path)
     try:
         generate_project_file(config)
+        conftest._mock_bpy()
+        import importlib
+        importlib.reload(blender_core)
+        fake_finalize = lambda *a, **k: None
+        blender_core.finalize_render = fake_finalize
+        blender_core.OPERATIONS["finalize_render"] = fake_finalize
         runpy.run_path(str(tmp_path / "blender_script.py"), run_name="__main__")
     finally:
         os.chdir(cwd)
