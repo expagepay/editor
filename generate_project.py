@@ -46,7 +46,7 @@ if __name__ == "__main__":
         ],
         "images": [
             {
-            "path": "assets\image.png",
+            "path": r"assets\image.png",
             "channel": 5,
             "start_frame": 1,
             "frame_end": 120,
