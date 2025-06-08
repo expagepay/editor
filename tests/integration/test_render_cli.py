@@ -33,10 +33,23 @@ def test_render_cli(tmp_path, project_root, prepare_assets):
     os.chdir(tmp_path)
     try:
         generate_project_file(config)
-        cmd = [blender, "-b", "-P", "blender_script.py", "--", "config/project_config.json"]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        cmd = [
+            blender,
+            "-b",
+            "-P",
+            "blender_script_template.py",
+            "--",
+            "config/project_config.json",
+        ]
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=180,
+        )
         assert result.returncode == 0
-        assert "Finished Rendering" in result.stdout
+        out = result.stdout.decode("utf-8", errors="ignore")
+        assert "Finished Rendering" in out
         out = tmp_path / "output" / "final.mp4"
         assert out.exists()
         assert out.stat().st_size > 0
